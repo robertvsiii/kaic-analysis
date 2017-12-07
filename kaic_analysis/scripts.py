@@ -15,19 +15,17 @@ import os
 import pickle
 import datetime
 
-folder = '../KMC_KaiC_rev2/'
 StateData = ['phos_frac', 'Afree', 'ACI', 'ACII', 'CIATP', 'CIIATP', 'Ttot', 'Stot', 'pU', 'pT', 'pD', 'pS']
 
-def LoadData(name, folder = folder, suffix = '.dat'):
+def LoadData(name, folder = '', suffix = '.dat'):
     col_ind = range(22)
     del col_ind[5]
     data = pd.read_table(folder+name+suffix,index_col=0,usecols=col_ind)
     return data.loc[(data!=0).any(1)]
 
-def RunModel(paramdict = {}, name = 'data', default = 'default.par', folder = folder):
-    os.chdir(folder)
+def RunModel(paramdict = {}, name = 'data', default = 'default.par', folder = ''):
     linelist = []
-    with open(default) as f:
+    with open(folder + default) as f:
         for line in f:
             for item in paramdict:
                 if line[:len(item)] == item:
@@ -36,13 +34,13 @@ def RunModel(paramdict = {}, name = 'data', default = 'default.par', folder = fo
                 line = 'output_filename ' + name + '\n'
             linelist.append(line)
 
-    with open(name + '.par','w') as f:
+    with open(folder + name + '.par','w') as f:
         for line in linelist:
             f.write(line)
             
-    subprocess.check_call('./KMCKaiC ' + name + '.par', shell = True)
+    subprocess.check_call('KMCKaiC ' + name + '.par', shell = True)
     
-    return LoadData(name)
+    return LoadData(name, folder=folder)
 
 def Current(data,species):
     J = [0]
@@ -52,7 +50,7 @@ def Current(data,species):
     values = [[],[]]
 
     for k in range(len(data)-1):
-        if data[species[0]].iloc[k] < center[0]:
+        if data[species[0]].iloc[k] < center[0] and data[species[0]].iloc[k+1] < center[0]:
             if data[species[1]].iloc[k] <= center[1] and data[species[1]].iloc[k+1] > center[1]:
                 J.append(J[-1]-1)
                 t.append(data.index[k])
@@ -67,7 +65,7 @@ def Current(data,species):
     J = np.asarray(J,dtype=int)
     t = np.asarray(t)
     T = (t[-1]-t[0])/J[-1]
-    return t, J, T
+    return t, J, T, center
 
 def CycleEntropy(data,T,Delmu = 15,vol = 0.5, conc = 0.6):
     NA = 6.02e23
@@ -91,7 +89,7 @@ def Uncertainty(data,species,vol=0.5,Delmu=15):
     
     return {'t': t, 'J': J, 'T': T, 'DelS': DelS, 'eps': eps}
 
-def FindParam(param,par_file,folder = folder):
+def FindParam(param,par_file,folder = ''):
     if param == 'Delmu':
         paramdict = {}
         with open(folder+par_file+'.par') as f:
@@ -116,7 +114,7 @@ def EntropyProduction(data,name='data'):
     ATPcons = 6*conv*NA*FindParam('volume',name)*FindParam('KaiC0',name)*(data['CIATPcons'] + data['CIIATPcons'])
     return FindParam('Delmu',name)*ATPcons
 
-def Ensemble(paramdict,ns,species=['pT','pS'],folder=folder,savename = 'data_processed',datname = 'data'):
+def Ensemble(paramdict,ns,species=['pT','pS'],folder='',savename = 'data_processed',datname = 'data'):
     results = []
     for k in range(ns):
         paramdict['rnd_seed'] = np.random.rand()*100
@@ -147,7 +145,7 @@ def FirstPassage(results,Ncyc = 1):
         
     return tau, DelS
 
-def Experiment(vol = 0.5, ATPmin = 0.3, ATPmax = 0.99, ns1 = 100, ns2 = 5, paramdict = {}, folder = folder):
+def Experiment(vol = 0.5, ATPmin = 0.3, ATPmax = 0.99, ns1 = 100, ns2 = 5, paramdict = {}, folder = ''):
     if ATPmax == 1:
         return 'ATPfrac must be less than 1 to get finite entropy production.'
     

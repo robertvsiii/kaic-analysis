@@ -1,6 +1,6 @@
 Metadata-Version: 1.0
 Name: kaic-analysis
-Version: 0.1
+Version: 0.1.1
 Summary: Analyze output of KaiC simulation from Paijmans et al., 2017.
 Home-page: https://github.mit.edu/robertvsiii-1/kaic-analysis
 Author: Robert Marsland III

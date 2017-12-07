@@ -1,5 +1,6 @@
+setup.py
 kaic_analysis/__init__.py
-kaic_analysis/kaic_analysis.py
+kaic_analysis/scripts.py
 kaic_analysis.egg-info/PKG-INFO
 kaic_analysis.egg-info/SOURCES.txt
 kaic_analysis.egg-info/dependency_links.txt
