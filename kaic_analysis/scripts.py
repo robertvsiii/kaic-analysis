@@ -19,7 +19,7 @@ StateData = ['phos_frac', 'Afree', 'ACI', 'ACII', 'CIATP', 'CIIATP', 'Ttot', 'St
 
 def LoadData(name, folder = '', suffix = '.dat'):
     col_ind = range(22)
-    del col_ind[5]
+    #del col_ind[5]
     data = pd.read_table(folder+name+suffix,index_col=0,usecols=col_ind)
     return data.loc[(data!=0).any(1)]
 
@@ -37,8 +37,7 @@ def RunModel(paramdict = {}, name = 'data', default = 'default.par', folder = ''
     with open(folder + name + '.par','w') as f:
         for line in linelist:
             f.write(line)
-            
-    subprocess.check_call('KMCKaiC ' + name + '.par', shell = True)
+    subprocess.check_call(folder+'KMCKaiC ' + name + '.par', shell = True)
     
     return LoadData(name, folder=folder)
 
@@ -64,30 +63,25 @@ def Current(data,species):
     
     J = np.asarray(J,dtype=int)
     t = np.asarray(t)
-    T = (t[-1]-t[0])/J[-1]
+    if len(J) > 0:
+        T = (t[-1]-t[1])/(J[-1]-J[1])
+    else:
+        T = np.nan
     return t, J, T, center
 
-def CycleEntropy(data,T,Delmu = 15,vol = 0.5, conc = 0.6):
+def EntropyRate(data,name='data'):
     NA = 6.02e23
     conv = 1e-21
-    ATPcons_hex = data['CIATPcons'].iloc[-1] + data['CIIATPcons'].iloc[-1]
-    ATPcons = ATPcons_hex*vol*conc*conv*NA
-    Ncyc = (data.index[-1]-data.index[0])/T
-    return ATPcons*Delmu/Ncyc
+    ATPcons_hex = (data['CIATPcons'].iloc[-1] + data['CIIATPcons'].iloc[-1] -
+                   data['CIATPcons'].iloc[0] - data['CIIATPcons'].iloc[0])
+    ATPcons = 6*conv*NA*FindParam('volume',name)*FindParam('KaiC0',name)*ATPcons_hex
+    return FindParam('Delmu',name)*ATPcons/(FindParam('tend',name)-FindParam('tequ',name))
 
 def FirstPassageSingleTraj(t,J):
     tau_list = []
     for k in range(2,max(J)+1):
         tau_list.append(t[np.where(J>=k)[0][0]]-t[np.where(J>=k-1)[0][0]])
     return np.asarray(tau_list)
-
-def Uncertainty(data,species,vol=0.5,Delmu=15):
-    t, J, T = Current(data,species)
-    tau = FirstPassageSingleTraj(t,J)
-    DelS = CycleEntropy(data,T,Delmu=Delmu)
-    eps = np.var(tau)/np.mean(tau)**2
-    
-    return {'t': t, 'J': J, 'T': T, 'DelS': DelS, 'eps': eps}
 
 def FindParam(param,par_file,folder = ''):
     if param == 'Delmu':
@@ -118,13 +112,15 @@ def Ensemble(paramdict,ns,species=['pT','pS'],folder='',savename = 'data_process
     results = []
     for k in range(ns):
         paramdict['rnd_seed'] = np.random.rand()*100
-        try:
-            data = RunModel(paramdict=paramdict,name = datname)
-            t, J, T = Current(data,species)
-            DelS = EntropyProduction(data,name = datname)
-            results.append({'t': t, 'J': J, 'T': T, 'DelS': DelS})
-        except:
-            results.append({'t': np.nan, 'J': np.nan, 'T': np.nan, 'DelS': np.nan})
+        data = None
+        while data is None:
+            try:
+                data = RunModel(paramdict=paramdict,name = datname,folder=folder)
+            except:
+                pass
+        t, J, T, center = Current(data,species)
+        Sdot = EntropyRate(data,name = datname)
+        results.append({'t': t, 'J': J, 'T': T, 'DelS': Sdot*T})
         
     return results
 
@@ -138,14 +134,15 @@ def FirstPassage(results,Ncyc = 1):
             t1 = item['t'][inds1[0]]
             t2 = item['t'][inds2[0]]
             tau.append(t2-t1)
-            DelS.append(item['DelS'].loc[t2]-item['DelS'].loc[t1])
         else:
             tau.append(np.nan)
-            DelS.append(np.nan)
+        DelS.append(item['DelS'])
         
     return tau, DelS
 
-def Experiment(vol = 0.5, ATPmin = 0.3, ATPmax = 0.99, ns1 = 100, ns2 = 5, paramdict = {}, folder = ''):
+def Experiment(vol = 0.5, ATPmin = 0.5, ATPmax = 0.999, ns1 = 10, ns2 = 5, 
+               paramdict = {}, folder = '', Ncyc = 50, tend = 3e3,
+               code_folder = './'):
     if ATPmax == 1:
         return 'ATPfrac must be less than 1 to get finite entropy production.'
     
@@ -154,6 +151,8 @@ def Experiment(vol = 0.5, ATPmin = 0.3, ATPmax = 0.99, ns1 = 100, ns2 = 5, param
     filename3 = folder + 'AllData_vol_' + str(vol) + '_' + str(datetime.datetime.now()).split()[0] + '.dat'
     
     paramdict['volume'] = vol
+    paramdict['tend'] = tend
+    paramdict['tequ'] = 50
     results = {}
     tau = {}
     DelS = {}
@@ -161,19 +160,19 @@ def Experiment(vol = 0.5, ATPmin = 0.3, ATPmax = 0.99, ns1 = 100, ns2 = 5, param
     for ATPfrac in np.linspace(ATPmin,ATPmax,ns2):
         keyname = 'ATPfrac = '+str(ATPfrac)
         paramdict['ATPfrac'] = ATPfrac
-        results[keyname] = Ensemble(paramdict,ns1)
-        tau[keyname], DelS[keyname] = FirstPassage(results[keyname])
+        results[keyname] = Ensemble(paramdict,ns1,folder=code_folder)
+        tau[keyname], DelS[keyname] = FirstPassage(results[keyname],Ncyc=Ncyc)
         
     tau = pd.DataFrame.from_dict(tau)
     tau.to_csv(filename1)
     DelS = pd.DataFrame.from_dict(DelS)
     DelS.to_csv(filename2)
-    with open(filename3,'w') as f:
+    with open(filename3,'wb') as f:
         pickle.dump(results,f)
         
     return tau, DelS, results
 
-def PlotExperiment(ex_out,tmax = 300., taumax = 200., DelSmax = 600000., nbins = 50):
+def PlotExperiment(ex_out,tmax = 3000., taumax = 3000., DelSmax = 6000000., nbins = 50):
     tau = ex_out[0]
     DelS = ex_out[1]
     results = ex_out[2]
