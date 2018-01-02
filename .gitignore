@@ -1,0 +1,5 @@
+*.pyc
+.ipynb_checkpoints
+.gitattributes
+.DS_Store
+kaic_analysis.egg-info

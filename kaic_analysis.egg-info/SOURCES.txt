@@ -1,9 +1,0 @@
-README.md
-setup.py
-kaic_analysis/__init__.py
-kaic_analysis/scripts.py
-kaic_analysis.egg-info/PKG-INFO
-kaic_analysis.egg-info/SOURCES.txt
-kaic_analysis.egg-info/dependency_links.txt
-kaic_analysis.egg-info/not-zip-safe
-kaic_analysis.egg-info/top_level.txt
