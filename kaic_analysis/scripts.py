@@ -150,7 +150,7 @@ def FirstPassage(results,Ncyc = 1):
     return tau, DelS
 
 def Experiment(vol = 0.5, param_min = 0.5, param_max = 0.999, param_name = 'ATPfrac', n_steps = 10, 
-               ens_size = 5, paramdict = {}, folder = 'data', Ncyc = 50, sample_cnt = 3e6, code_folder = None):
+               ens_size = 5, paramdict = {}, folder = 'data', Ncyc = 30, sample_cnt = 3e6, code_folder = None):
     
     filename1 = folder + '/FirstPassageData_vol_' + str(vol) + '_' + str(datetime.datetime.now()).split()[0] + '.csv'
     filename2 = folder + '/DelS_vol_' + str(vol) + '_' + str(datetime.datetime.now()).split()[0] + '.csv'
