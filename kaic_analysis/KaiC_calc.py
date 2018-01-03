@@ -19,7 +19,7 @@ code_folder = '/usr2/postdoc/marsland/KMC_KaiC/'
 distutils.dir_util.mkpath(folder)
 
 es = 100
-dt = 0.0005
+sc = 3e6
 
 tau, DelS, results = Experiment(vol=1,n_steps=args.ns,ens_size=es,param_min=args.min,param_max=args.max,
-                                param_name=args.param,folder=folder,code_folder=code_folder,dt=dt)
+                                param_name=args.param,folder=folder,code_folder=code_folder,sample_cnt=sc)

@@ -20,8 +20,7 @@ StateData = ['phos_frac', 'Afree', 'ACI', 'ACII', 'CIATP', 'CIIATP', 'Ttot', 'St
 def LoadData(name, folder = '', suffix = '.dat'):
     col_ind = list(range(22))
     del col_ind[5]
-    data = pd.read_table(folder+name+suffix,index_col=0,usecols=col_ind)
-    return data.loc[(data!=0).any(1)]
+    return pd.read_table(folder+name+suffix,index_col=0,usecols=col_ind)
 
 def RunModel(paramdict = {}, name = 'data', default = 'default.par', folder = None):
     if folder != None:
@@ -83,7 +82,7 @@ def EntropyRate(data,name='data',folder=''):
     ATPcons = (6*conv*NA*FindParam('volume',name,folder=folder)*
                FindParam('KaiC0',name,folder=folder)*ATPcons_hex)
     return (FindParam('Delmu',name,folder=folder)*ATPcons/
-            (FindParam('tend',name,folder=folder)-FindParam('tequ',name,folder=folder)))
+            (data.index[-1]-data.index[0]))
 
 def FirstPassageSingleTraj(t,J):
     tau_list = []
@@ -151,17 +150,15 @@ def FirstPassage(results,Ncyc = 1):
     return tau, DelS
 
 def Experiment(vol = 0.5, param_min = 0.5, param_max = 0.999, param_name = 'ATPfrac', n_steps = 10, 
-               ens_size = 5, paramdict = {}, folder = '', Ncyc = 50, tend = 3e3, code_folder = None,
-               dt = 0.0005):
+               ens_size = 5, paramdict = {}, folder = 'data', Ncyc = 50, sample_cnt = 3e6, code_folder = None):
     
-    filename1 = folder + 'FirstPassageData_vol_' + str(vol) + '_' + str(datetime.datetime.now()).split()[0] + '.csv'
-    filename2 = folder + 'DelS_vol_' + str(vol) + '_' + str(datetime.datetime.now()).split()[0] + '.csv'
-    filename3 = folder + 'AllData_vol_' + str(vol) + '_' + str(datetime.datetime.now()).split()[0] + '.dat'
+    filename1 = folder + '/FirstPassageData_vol_' + str(vol) + '_' + str(datetime.datetime.now()).split()[0] + '.csv'
+    filename2 = folder + '/DelS_vol_' + str(vol) + '_' + str(datetime.datetime.now()).split()[0] + '.csv'
+    filename3 = folder + '/AllData_vol_' + str(vol) + '_' + str(datetime.datetime.now()).split()[0] + '.dat'
     
     paramdict['volume'] = vol
-    paramdict['tend'] = tend
+    paramdict['sample_cnt'] = sample_cnt
     paramdict['tequ'] = 50
-    paramdict['t_sample_incr'] = dt
     results = {}
     tau = {}
     DelS = {}
@@ -172,12 +169,12 @@ def Experiment(vol = 0.5, param_min = 0.5, param_max = 0.999, param_name = 'ATPf
         results[keyname] = Ensemble(paramdict,ens_size,folder=code_folder)
         tau[keyname], DelS[keyname] = FirstPassage(results[keyname],Ncyc=Ncyc)
         
-    tau = pd.DataFrame.from_dict(tau)
-    tau.to_csv(filename1)
-    DelS = pd.DataFrame.from_dict(DelS)
-    DelS.to_csv(filename2)
-    with open(filename3,'wb') as f:
-        pickle.dump(results,f)
+        tau = pd.DataFrame.from_dict(tau)
+        tau.to_csv(filename1)
+        DelS = pd.DataFrame.from_dict(DelS)
+        DelS.to_csv(filename2)
+        with open(filename3,'wb') as f:
+            pickle.dump(results,f)
         
     return tau, DelS, results
 
