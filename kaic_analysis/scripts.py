@@ -18,14 +18,17 @@ import datetime
 StateData = ['phos_frac', 'Afree', 'ACI', 'ACII', 'CIATP', 'CIIATP', 'Ttot', 'Stot', 'pU', 'pT', 'pD', 'pS']
 
 def LoadData(name, folder = '', suffix = '.dat'):
-    col_ind = range(22)
-    #del col_ind[5]
+    col_ind = list(range(22))
+    del col_ind[5]
     data = pd.read_table(folder+name+suffix,index_col=0,usecols=col_ind)
     return data.loc[(data!=0).any(1)]
 
-def RunModel(paramdict = {}, name = 'data', default = 'default.par', folder = ''):
+def RunModel(paramdict = {}, name = 'data', default = 'default.par', folder = None):
+    if folder != None:
+        cwd = os.getcwd()
+        os.chdir(folder)
     linelist = []
-    with open(folder + default) as f:
+    with open(default) as f:
         for line in f:
             for item in paramdict:
                 if line[:len(item)] == item:
@@ -34,12 +37,15 @@ def RunModel(paramdict = {}, name = 'data', default = 'default.par', folder = ''
                 line = 'output_filename ' + name + '\n'
             linelist.append(line)
 
-    with open(folder + name + '.par','w') as f:
+    with open(name + '.par','w') as f:
         for line in linelist:
             f.write(line)
-    subprocess.check_call(folder+'KMCKaiC ' + name + '.par', shell = True)
-    
-    return LoadData(name, folder=folder)
+    subprocess.check_call('./KMCKaiC ' + name + '.par', shell = True)
+    if folder != None:
+        os.chdir(cwd)
+        return LoadData(name, folder=folder)
+    else:
+        return LoadData(name)
 
 def Current(data,species):
     J = [0]
@@ -63,19 +69,21 @@ def Current(data,species):
     
     J = np.asarray(J,dtype=int)
     t = np.asarray(t)
-    if len(J) > 0:
+    if len(J) > 1:
         T = (t[-1]-t[1])/(J[-1]-J[1])
     else:
         T = np.nan
     return t, J, T, center
 
-def EntropyRate(data,name='data'):
+def EntropyRate(data,name='data',folder=''):
     NA = 6.02e23
     conv = 1e-21
     ATPcons_hex = (data['CIATPcons'].iloc[-1] + data['CIIATPcons'].iloc[-1] -
                    data['CIATPcons'].iloc[0] - data['CIIATPcons'].iloc[0])
-    ATPcons = 6*conv*NA*FindParam('volume',name)*FindParam('KaiC0',name)*ATPcons_hex
-    return FindParam('Delmu',name)*ATPcons/(FindParam('tend',name)-FindParam('tequ',name))
+    ATPcons = (6*conv*NA*FindParam('volume',name,folder=folder)*
+               FindParam('KaiC0',name,folder=folder)*ATPcons_hex)
+    return (FindParam('Delmu',name,folder=folder)*ATPcons/
+            (FindParam('tend',name,folder=folder)-FindParam('tequ',name,folder=folder)))
 
 def FirstPassageSingleTraj(t,J):
     tau_list = []
@@ -83,7 +91,9 @@ def FirstPassageSingleTraj(t,J):
         tau_list.append(t[np.where(J>=k)[0][0]]-t[np.where(J>=k-1)[0][0]])
     return np.asarray(tau_list)
 
-def FindParam(param,par_file,folder = ''):
+def FindParam(param,par_file,folder=''):
+    if folder==None:
+        folder=''
     if param == 'Delmu':
         paramdict = {}
         with open(folder+par_file+'.par') as f:
@@ -108,18 +118,18 @@ def EntropyProduction(data,name='data'):
     ATPcons = 6*conv*NA*FindParam('volume',name)*FindParam('KaiC0',name)*(data['CIATPcons'] + data['CIIATPcons'])
     return FindParam('Delmu',name)*ATPcons
 
-def Ensemble(paramdict,ns,species=['pT','pS'],folder='',savename = 'data_processed',datname = 'data'):
+def Ensemble(paramdict,ns,species=['pT','pS'],folder=None,savename='data_processed',datname='data'):
     results = []
     for k in range(ns):
         paramdict['rnd_seed'] = np.random.rand()*100
         data = None
         while data is None:
             try:
-                data = RunModel(paramdict=paramdict,name = datname,folder=folder)
+                data = RunModel(paramdict=paramdict,name=datname,folder=folder)
             except:
                 pass
         t, J, T, center = Current(data,species)
-        Sdot = EntropyRate(data,name = datname)
+        Sdot = EntropyRate(data,name=datname,folder=folder)
         results.append({'t': t, 'J': J, 'T': T, 'DelS': Sdot*T})
         
     return results
@@ -140,11 +150,9 @@ def FirstPassage(results,Ncyc = 1):
         
     return tau, DelS
 
-def Experiment(vol = 0.5, ATPmin = 0.5, ATPmax = 0.999, ns1 = 10, ns2 = 5, 
-               paramdict = {}, folder = '', Ncyc = 50, tend = 3e3,
-               code_folder = './'):
-    if ATPmax == 1:
-        return 'ATPfrac must be less than 1 to get finite entropy production.'
+def Experiment(vol = 0.5, param_min = 0.5, param_max = 0.999, param_name = 'ATPfrac', n_steps = 10, 
+               ens_size = 5, paramdict = {}, folder = '', Ncyc = 50, tend = 3e3, code_folder = None,
+               dt = 0.0005):
     
     filename1 = folder + 'FirstPassageData_vol_' + str(vol) + '_' + str(datetime.datetime.now()).split()[0] + '.csv'
     filename2 = folder + 'DelS_vol_' + str(vol) + '_' + str(datetime.datetime.now()).split()[0] + '.csv'
@@ -153,14 +161,15 @@ def Experiment(vol = 0.5, ATPmin = 0.5, ATPmax = 0.999, ns1 = 10, ns2 = 5,
     paramdict['volume'] = vol
     paramdict['tend'] = tend
     paramdict['tequ'] = 50
+    paramdict['t_sample_incr'] = dt
     results = {}
     tau = {}
     DelS = {}
     
-    for ATPfrac in np.linspace(ATPmin,ATPmax,ns2):
-        keyname = 'ATPfrac = '+str(ATPfrac)
-        paramdict['ATPfrac'] = ATPfrac
-        results[keyname] = Ensemble(paramdict,ns1,folder=code_folder)
+    for paramval in np.linspace(param_min,param_max,n_steps):
+        keyname = param_name + ' = ' + str(paramval)
+        paramdict[param_name] = paramval
+        results[keyname] = Ensemble(paramdict,ens_size,folder=code_folder)
         tau[keyname], DelS[keyname] = FirstPassage(results[keyname],Ncyc=Ncyc)
         
     tau = pd.DataFrame.from_dict(tau)
@@ -181,17 +190,18 @@ def PlotExperiment(ex_out,tmax = 3000., taumax = 3000., DelSmax = 6000000., nbin
     sbins = np.linspace(0,DelSmax,nbins)
     fig, axs = plt.subplots(ns2,3,sharex='col',figsize = (8,10))
     
-    ATPfraclist = []
+    paramlist = []
     for name in tau.keys():
-        ATPfraclist.append(float(name.split()[-1]))
-    ATPfraclist.sort()
+        paramlist.append(float(name.split()[-1]))
+    param_name = tau.keys()[0].split()[0]
+    paramlist.sort()
 
 
     k = 0
     eps = []
     DelSmean = []
-    for ATPfrac in ATPfraclist:
-        name = 'ATPfrac = '+str(ATPfrac)
+    for paramval in paramlist:
+        name = param_name + ' = ' + str(paramval)
         for item in results[name]:
             if type(item['t']) == list or type(item['t']) == np.ndarray:
                 if len(item['t']) > 1:
