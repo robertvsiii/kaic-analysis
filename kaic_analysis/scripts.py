@@ -145,7 +145,7 @@ def FirstPassage(results,Ncyc = 1):
             tau.append(t2-t1)
         else:
             tau.append(np.nan)
-        DelS.append(item['DelS'])
+        DelS.append(item['DelS']*Ncyc)
         
     return tau, DelS
 
@@ -175,7 +175,7 @@ def LoadExperiment(param_name,param_vals,date,folder='data'):
         
     return tau, DelS, results
 
-def Experiment(vol = 0.5, param_val = 0.5, param_name = 'ATPfrac', n_steps = 10, ens_size = 5, paramdict = {}, 
+def Experiment(vol = 0.5, param_val = 0.5, param_name = 'ATPfrac', ens_size = 5, paramdict = {}, 
                folder = 'data', Ncyc = 30, sample_cnt = 3e6, code_folder = None):
     
     name = '_'.join(param_name,str(param_val),str(datetime.datetime.now()).split()[0])
