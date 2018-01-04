@@ -67,7 +67,7 @@ def Current(data,species):
                 values[1].append(data[species[1]].iloc[k])
     
     J = np.asarray(J,dtype=int)
-    t = np.asarray(t)
+    t = np.asarray(t,dtype=float)
     if len(J) > 1:
         T = (t[-1]-t[1])/(J[-1]-J[1])
     else:
@@ -119,6 +119,9 @@ def EntropyProduction(data,name='data'):
 
 def Ensemble(paramdict,ns,species=['pT','pS'],folder=None,savename='data_processed',datname='data'):
     results = []
+    Tvec = []
+    Sdotvec = []
+
     for k in range(ns):
         paramdict['rnd_seed'] = np.random.rand()*100
         data = None
@@ -127,15 +130,18 @@ def Ensemble(paramdict,ns,species=['pT','pS'],folder=None,savename='data_process
                 data = RunModel(paramdict=paramdict,name=datname,folder=folder)
             except:
                 pass
-        t, J, T, center = Current(data,species)
-        Sdot = EntropyRate(data,name=datname,folder=folder)
-        results.append({'t': t, 'J': J, 'T': T, 'DelS': Sdot*T})
-        
-    return results
+        t, J, T_new, center = Current(data,species)
+        Sdot_new = EntropyRate(data,name=datname,folder=folder)
+        Tvec.append(T_new)
+        Sdotvec.append(Sdot_new)
+        results.append({'t': t, 'J': J})
+    T = np.nanmean(Tvec)
+    Sdot = np.nanmean(Sdotvec)
+    
+    return results, T, Sdot
 
 def FirstPassage(results,Ncyc = 1):
     tau = []
-    DelS = []
     for item in results:
         inds1 = np.where(item['J'] >= 1)[0]
         inds2 = np.where(item['J'] >= 1+Ncyc)[0]
@@ -145,9 +151,8 @@ def FirstPassage(results,Ncyc = 1):
             tau.append(t2-t1)
         else:
             tau.append(np.nan)
-        DelS.append(item['DelS']*Ncyc)
         
-    return tau, DelS
+    return tau
 
 def LoadExperiment(param_name,run_numbers,date,folder='data'):
     
@@ -192,12 +197,13 @@ def Experiment(vol = 0.5, param_val = 0.5, param_name = 'ATPfrac', ens_size = 5,
     
     keyname = param_name + ' = ' + str(param_val)
     paramdict[param_name] = param_val
-    results[keyname] = Ensemble(paramdict,ens_size,folder=code_folder)
-    tau[keyname], DelS[keyname] = FirstPassage(results[keyname],Ncyc=Ncyc)
+    results[keyname], T, Sdot = Ensemble(paramdict,ens_size,folder=code_folder)
+    tau[keyname] = FirstPassage(results[keyname],Ncyc=Ncyc)
+    DelS[keyname] = Sdot*T*Ncyc
         
     tau = pd.DataFrame.from_dict(tau)
     tau.to_csv(filename1)
-    DelS = pd.DataFrame.from_dict(DelS)
+    DelS = pd.DataFrame.from_dict(DelS,orient='index').T
     DelS.to_csv(filename2)
     with open(filename3,'wb') as f:
         pickle.dump(results,f)
@@ -211,7 +217,7 @@ def PlotExperiment(ex_out,tmax = 3000., taumax = 3000., DelSmax = 6000000., nbin
     ns2 = len(tau.keys())
     tbins = np.linspace(0,taumax,nbins)
     sbins = np.linspace(0,DelSmax,nbins)
-    fig, axs = plt.subplots(ns2,3,sharex='col',figsize = (8,10))
+    fig, axs = plt.subplots(ns2,2,sharex='col',figsize = (8,10))
     
     paramlist = []
     for name in tau.keys():
@@ -231,16 +237,13 @@ def PlotExperiment(ex_out,tmax = 3000., taumax = 3000., DelSmax = 6000000., nbin
                     axs[k,0].plot(item['t']-item['t'][1],item['J']-item['J'][1])
         tau[name].hist(ax=axs[k,1],bins=tbins)
         axs[k,1].set_yticks(())
-        DelS[name].hist(ax=axs[k,2],bins=sbins)
-        axs[k,2].set_yticks(())
         eps.append(tau[name].var()/tau[name].mean()**2)
-        DelSmean.append(DelS[name].mean())
+        DelSmean.append(DelS[name])
         k += 1
 
     axs[int(round(ns2*1./2)),0].set_ylabel('Number of Cycles')
     axs[-1,0].set_xlabel('Time (hrs)')
     axs[-1,1].set_xlabel(r'$\tau$ (hrs)')
-    axs[-1,2].set_xlabel(r'$\Delta S_c\,(k_B)$')
     axs[-1,0].set_xlim((0,tmax))
     axs[-1,1].set_xlim((0,taumax))
     
