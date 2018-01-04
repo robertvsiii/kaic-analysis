@@ -151,7 +151,7 @@ def FirstPassage(results,Ncyc = 1):
 
 def LoadExperiment(param_name,param_vals,date,folder='data'):
     
-    name = '_'.join(param_name,str(param_vals[0]),date)
+    name = '_'.join([param_name,str(param_vals[0]),date])
     filename1 = folder + '/FirstPassageData_' + name + '.csv'
     filename2 = folder + '/DelS_' + name + '.csv'
     filename3 = folder + '/AllData_' + name + '.dat'
@@ -162,7 +162,7 @@ def LoadExperiment(param_name,param_vals,date,folder='data'):
         results=pickle.load(f)
        
     for param_val in param_vals[1:]:
-        name = '_'.join(param_name,str(param_vals[0]),date)
+        name = '_'.join([param_name,str(param_vals[0]),date])
         filename1 = folder + '/FirstPassageData_' + name + '.csv'
         filename2 = folder + '/DelS_' + name + '.csv'
         filename3 = folder + '/AllData_' + name + '.dat'
@@ -178,7 +178,7 @@ def LoadExperiment(param_name,param_vals,date,folder='data'):
 def Experiment(vol = 0.5, param_val = 0.5, param_name = 'ATPfrac', ens_size = 5, paramdict = {}, 
                folder = 'data', Ncyc = 30, sample_cnt = 3e6, code_folder = None):
     
-    name = '_'.join(param_name,str(param_val),str(datetime.datetime.now()).split()[0])
+    name = '_'.join([param_name,str(param_val),str(datetime.datetime.now()).split()[0]])
     filename1 = folder + '/FirstPassageData_' + name + '.csv'
     filename2 = folder + '/DelS_' + name + '.csv'
     filename3 = folder + '/AllData_' + name + '.dat'
