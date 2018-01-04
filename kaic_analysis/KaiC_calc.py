@@ -21,5 +21,5 @@ code_folder = '/usr2/postdoc/marsland/KMC_KaiC/'
 sc = 1e7
 param_val = args.task_ID*args.scale
 
-tau, DelS, results = Experiment(ens_size=args.es,param_min=param_val,param_max=args.max,
-                                param_name=args.param,folder=folder,code_folder=code_folder,sample_cnt=sc)
+tau, DelS, results = Experiment(ens_size=args.es,param_val=param_val,param_name=args.param,
+                                folder=folder,code_folder=code_folder,sample_cnt=sc)
