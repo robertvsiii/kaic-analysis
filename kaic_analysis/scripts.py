@@ -149,12 +149,39 @@ def FirstPassage(results,Ncyc = 1):
         
     return tau, DelS
 
-def Experiment(vol = 0.5, param_min = 0.5, param_max = 0.999, param_name = 'ATPfrac', n_steps = 10, 
-               ens_size = 5, paramdict = {}, folder = 'data', Ncyc = 30, sample_cnt = 3e6, code_folder = None):
+def LoadExperiment(param_name,param_vals,date,folder='data'):
     
-    filename1 = folder + '/FirstPassageData_vol_' + str(vol) + '_' + str(datetime.datetime.now()).split()[0] + '.csv'
-    filename2 = folder + '/DelS_vol_' + str(vol) + '_' + str(datetime.datetime.now()).split()[0] + '.csv'
-    filename3 = folder + '/AllData_vol_' + str(vol) + '_' + str(datetime.datetime.now()).split()[0] + '.dat'
+    name = '_'.join(param_name,str(param_vals[0]),date)
+    filename1 = folder + '/FirstPassageData_' + name + '.csv'
+    filename2 = folder + '/DelS_' + name + '.csv'
+    filename3 = folder + '/AllData_' + name + '.dat'
+    
+    tau=pd.read_csv(filename1,index_col=0)
+    DelS=pd.read_csv(filename2,index_col=0)
+    with open(filename3,'rb') as f:
+        results=pickle.load(f)
+       
+    for param_val in param_vals[1:]:
+        name = '_'.join(param_name,str(param_vals[0]),date)
+        filename1 = folder + '/FirstPassageData_' + name + '.csv'
+        filename2 = folder + '/DelS_' + name + '.csv'
+        filename3 = folder + '/AllData_' + name + '.dat'
+    
+        tau = tau.join(pd.read_csv(filename1,index_col=0))
+        DelS = DelS.join(pd.read_csv(filename2,index_col=0))
+        with open(filename3,'rb') as f:
+            results_new=pickle.load(f)
+        results.update(results_new)
+        
+    return tau, DelS, results
+
+def Experiment(vol = 0.5, param_val = 0.5, param_name = 'ATPfrac', n_steps = 10, ens_size = 5, paramdict = {}, 
+               folder = 'data', Ncyc = 30, sample_cnt = 3e6, code_folder = None):
+    
+    name = '_'.join(param_name,str(param_val),str(datetime.datetime.now()).split()[0])
+    filename1 = folder + '/FirstPassageData_' + name + '.csv'
+    filename2 = folder + '/DelS_' + name + '.csv'
+    filename3 = folder + '/AllData_' + name + '.dat'
     
     paramdict['volume'] = vol
     paramdict['sample_cnt'] = sample_cnt
@@ -163,18 +190,17 @@ def Experiment(vol = 0.5, param_min = 0.5, param_max = 0.999, param_name = 'ATPf
     tau = {}
     DelS = {}
     
-    for paramval in np.linspace(param_min,param_max,n_steps):
-        keyname = param_name + ' = ' + str(paramval)
-        paramdict[param_name] = paramval
-        results[keyname] = Ensemble(paramdict,ens_size,folder=code_folder)
-        tau[keyname], DelS[keyname] = FirstPassage(results[keyname],Ncyc=Ncyc)
+    keyname = param_name + ' = ' + str(param_val)
+    paramdict[param_name] = param_val
+    results[keyname] = Ensemble(paramdict,ens_size,folder=code_folder)
+    tau[keyname], DelS[keyname] = FirstPassage(results[keyname],Ncyc=Ncyc)
         
-        tau = pd.DataFrame.from_dict(tau)
-        tau.to_csv(filename1)
-        DelS = pd.DataFrame.from_dict(DelS)
-        DelS.to_csv(filename2)
-        with open(filename3,'wb') as f:
-            pickle.dump(results,f)
+    tau = pd.DataFrame.from_dict(tau)
+    tau.to_csv(filename1)
+    DelS = pd.DataFrame.from_dict(DelS)
+    DelS.to_csv(filename2)
+    with open(filename3,'wb') as f:
+        pickle.dump(results,f)
         
     return tau, DelS, results
 
