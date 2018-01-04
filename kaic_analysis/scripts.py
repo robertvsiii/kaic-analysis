@@ -149,9 +149,9 @@ def FirstPassage(results,Ncyc = 1):
         
     return tau, DelS
 
-def LoadExperiment(param_name,param_vals,date,folder='data'):
+def LoadExperiment(param_name,run_numbers,date,folder='data'):
     
-    name = '_'.join([param_name,str(param_vals[0]),date])
+    name = '_'.join([param_name,str(run_numbers[0]),date])
     filename1 = folder + '/FirstPassageData_' + name + '.csv'
     filename2 = folder + '/DelS_' + name + '.csv'
     filename3 = folder + '/AllData_' + name + '.dat'
@@ -161,8 +161,8 @@ def LoadExperiment(param_name,param_vals,date,folder='data'):
     with open(filename3,'rb') as f:
         results=pickle.load(f)
        
-    for param_val in param_vals[1:]:
-        name = '_'.join([param_name,str(param_vals[0]),date])
+    for run_number in run_numbers[1:]:
+        name = '_'.join([param_name,str(run_number),date])
         filename1 = folder + '/FirstPassageData_' + name + '.csv'
         filename2 = folder + '/DelS_' + name + '.csv'
         filename3 = folder + '/AllData_' + name + '.dat'
@@ -176,9 +176,9 @@ def LoadExperiment(param_name,param_vals,date,folder='data'):
     return tau, DelS, results
 
 def Experiment(vol = 0.5, param_val = 0.5, param_name = 'ATPfrac', ens_size = 5, paramdict = {}, 
-               folder = 'data', Ncyc = 30, sample_cnt = 3e6, code_folder = None):
+               folder = 'data', Ncyc = 30, sample_cnt = 3e6, code_folder = None, run_number = 1):
     
-    name = '_'.join([param_name,str(param_val),str(datetime.datetime.now()).split()[0]])
+    name = '_'.join([param_name,str(run_number),str(datetime.datetime.now()).split()[0]])
     filename1 = folder + '/FirstPassageData_' + name + '.csv'
     filename2 = folder + '/DelS_' + name + '.csv'
     filename3 = folder + '/AllData_' + name + '.dat'

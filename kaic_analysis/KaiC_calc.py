@@ -22,4 +22,4 @@ sc = 1e7
 param_val = args.task_ID*args.scale
 
 tau, DelS, results = Experiment(ens_size=args.es,param_val=param_val,param_name=args.param,
-                                folder=folder,code_folder=code_folder,sample_cnt=sc)
+                                folder=folder,code_folder=code_folder,sample_cnt=sc,run_number=args.task_ID)
