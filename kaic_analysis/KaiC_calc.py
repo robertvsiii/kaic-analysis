@@ -18,7 +18,7 @@ folder = '/project/biophys/thermodynamics_of_oscillations/'
 code_folder = '/usr2/postdoc/marsland/KMC_KaiC/'
 #distutils.dir_util.mkpath(folder)
 
-sc = 1e7
+sc = 3e6
 param_val = args.task_ID*args.scale
 
 tau, DelS, results = Experiment(ens_size=args.es,param_val=param_val,param_name=args.param,
