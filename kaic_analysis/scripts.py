@@ -82,7 +82,7 @@ def EntropyRate(data,name='data',folder=''):
     ATPcons = (6*conv*NA*FindParam('volume',name,folder=folder)*
                FindParam('KaiC0',name,folder=folder)*ATPcons_hex)
     return (FindParam('Delmu',name,folder=folder)*ATPcons/
-            (data.index[-1]-data.index[0]))
+            (float(data.index[-1])-float(data.index[0])))
 
 def FirstPassageSingleTraj(t,J):
     tau_list = []
@@ -210,7 +210,7 @@ def Experiment(vol = 0.5, param_val = 0.5, param_name = 'ATPfrac', ens_size = 5,
         
     return tau, DelS, results
 
-def PlotExperiment(ex_out,tmax = 3000., taumax = 3000., DelSmax = 6000000., nbins = 50):
+def PlotExperiment(ex_out,tmax = 3000., taumax = 3000., nbins = 50):
     tau = ex_out[0]
     DelS = ex_out[1]
     results = ex_out[2]
