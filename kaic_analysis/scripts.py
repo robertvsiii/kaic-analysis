@@ -19,12 +19,12 @@ StateData = ['phos_frac', 'Afree', 'ACI', 'ACII', 'CIATP', 'CIIATP', 'Ttot', 'St
 
 def FormatPath(folder):
     if folder==None:
-        new_folder=''
+        folder=''
     else:
         if folder != '':
             if folder[-1] != '/':
-                new_folder = folder+'/'
-    return new_folder
+                folder = folder+'/'
+    return folder
 
 def LoadData(name, folder = None, suffix = '.dat'):
     folder = FormatPath(folder)
@@ -78,10 +78,11 @@ def Current(data,species):
     
     J = np.asarray(J,dtype=int)
     t = np.asarray(t,dtype=float)
+    T = np.nan
     if len(J) > 1:
-        T = (t[-1]-t[1])/(J[-1]-J[1])
-    else:
-        T = np.nan
+        if J[-1]>J[1]:
+            T = (t[-1]-t[1])/(J[-1]-J[1])
+        
     return t, J, T, center
 
 def EntropyRate(data,name='data',folder=None):
@@ -93,7 +94,7 @@ def EntropyRate(data,name='data',folder=None):
     ATPcons = (6*conv*NA*FindParam('volume',name,folder=folder)*
                FindParam('KaiC0',name,folder=folder)*ATPcons_hex)
     return (FindParam('Delmu',name,folder=folder)*ATPcons/
-            (float(data.index[-1])-float(data.index[0])))
+            (data.index[-1]-data.index[0]))
 
 def FirstPassageSingleTraj(t,J):
     tau_list = []
