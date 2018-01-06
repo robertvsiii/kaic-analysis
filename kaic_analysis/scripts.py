@@ -17,7 +17,17 @@ import datetime
 
 StateData = ['phos_frac', 'Afree', 'ACI', 'ACII', 'CIATP', 'CIIATP', 'Ttot', 'Stot', 'pU', 'pT', 'pD', 'pS']
 
-def LoadData(name, folder = '', suffix = '.dat'):
+def FormatPath(folder):
+    if folder==None:
+        new_folder=''
+    else:
+        if folder != '':
+            if folder[-1] != '/':
+                new_folder = folder+'/'
+    return new_folder
+
+def LoadData(name, folder = None, suffix = '.dat'):
+    folder = FormatPath(folder)
     col_ind = list(range(22))
     del col_ind[5]
     return pd.read_table(folder+name+suffix,index_col=0,usecols=col_ind)
@@ -74,7 +84,8 @@ def Current(data,species):
         T = np.nan
     return t, J, T, center
 
-def EntropyRate(data,name='data',folder=''):
+def EntropyRate(data,name='data',folder=None):
+       
     NA = 6.02e23
     conv = 1e-21
     ATPcons_hex = (data['CIATPcons'].iloc[-1] + data['CIIATPcons'].iloc[-1] -
@@ -90,9 +101,9 @@ def FirstPassageSingleTraj(t,J):
         tau_list.append(t[np.where(J>=k)[0][0]]-t[np.where(J>=k-1)[0][0]])
     return np.asarray(tau_list)
 
-def FindParam(param,par_file,folder=''):
-    if folder==None:
-        folder=''
+def FindParam(param,par_file,folder=None):
+    folder = FormatPath(folder)
+                
     if param == 'Delmu':
         paramdict = {}
         with open(folder+par_file+'.par') as f:
@@ -117,24 +128,33 @@ def EntropyProduction(data,name='data'):
     ATPcons = 6*conv*NA*FindParam('volume',name)*FindParam('KaiC0',name)*(data['CIATPcons'] + data['CIIATPcons'])
     return FindParam('Delmu',name)*ATPcons
 
-def Ensemble(paramdict,ns,species=['pT','pS'],folder=None,savename='data_processed',datname='data'):
+def Ensemble(paramdict,ns,species=['pT','pS'],folder=None,savename='data_processed'):
     results = []
     Tvec = []
     Sdotvec = []
+    
+    path = FormatPath(folder)
 
     for k in range(ns):
-        paramdict['rnd_seed'] = np.random.rand()*100
+        paramdict['rnd_seed'] = np.random.rand()*1000000
         data = None
-        while data is None:
+        count = 0
+        while data is None and count < 10:
             try:
+                datname = 'data_'+str(np.random.randint(1000000))
                 data = RunModel(paramdict=paramdict,name=datname,folder=folder)
             except:
-                pass
+                subprocess.check_call('rm -f '+path+datname+'.par', shell = True)
+                count += 1
+        if data is None:
+            return 'KMCKaiC failed to run.'
         t, J, T_new, center = Current(data,species)
         Sdot_new = EntropyRate(data,name=datname,folder=folder)
         Tvec.append(T_new)
         Sdotvec.append(Sdot_new)
         results.append({'t': t, 'J': J})
+        subprocess.check_call('rm -f '+'\''+path+datname+'.dat'+'\'', shell = True)
+        subprocess.check_call('rm -f '+'\''+path+datname+'.par'+'\'', shell = True)
     T = np.nanmean(Tvec)
     Sdot = np.nanmean(Sdotvec)
     
@@ -155,11 +175,12 @@ def FirstPassage(results,Ncyc = 1):
     return tau
 
 def LoadExperiment(param_name,run_numbers,date,folder='data'):
+    folder = FormatPath(folder)
     
     name = '_'.join([param_name,str(run_numbers[0]),date])
-    filename1 = folder + '/FirstPassageData_' + name + '.csv'
-    filename2 = folder + '/DelS_' + name + '.csv'
-    filename3 = folder + '/AllData_' + name + '.dat'
+    filename1 = folder + 'FirstPassageData_' + name + '.csv'
+    filename2 = folder + 'DelS_' + name + '.csv'
+    filename3 = folder + 'AllData_' + name + '.dat'
     
     tau=pd.read_csv(filename1,index_col=0)
     DelS=pd.read_csv(filename2,index_col=0)
@@ -168,9 +189,9 @@ def LoadExperiment(param_name,run_numbers,date,folder='data'):
        
     for run_number in run_numbers[1:]:
         name = '_'.join([param_name,str(run_number),date])
-        filename1 = folder + '/FirstPassageData_' + name + '.csv'
-        filename2 = folder + '/DelS_' + name + '.csv'
-        filename3 = folder + '/AllData_' + name + '.dat'
+        filename1 = folder + 'FirstPassageData_' + name + '.csv'
+        filename2 = folder + 'DelS_' + name + '.csv'
+        filename3 = folder + 'AllData_' + name + '.dat'
     
         tau = tau.join(pd.read_csv(filename1,index_col=0))
         DelS = DelS.join(pd.read_csv(filename2,index_col=0))
@@ -180,14 +201,15 @@ def LoadExperiment(param_name,run_numbers,date,folder='data'):
         
     return tau, DelS, results
 
-def Experiment(vol = 0.5, param_val = 0.5, param_name = 'ATPfrac', ens_size = 5, paramdict = {}, 
+def Experiment(vol = 0.5, param_val = 0.5, param_name = 'ATPfrac', ens_size = 5, 
                folder = 'data', Ncyc = 30, sample_cnt = 3e6, code_folder = None, run_number = 1):
-    
+    folder = FormatPath(folder)
     name = '_'.join([param_name,str(run_number),str(datetime.datetime.now()).split()[0]])
-    filename1 = folder + '/FirstPassageData_' + name + '.csv'
-    filename2 = folder + '/DelS_' + name + '.csv'
-    filename3 = folder + '/AllData_' + name + '.dat'
+    filename1 = folder + 'FirstPassageData_' + name + '.csv'
+    filename2 = folder + 'DelS_' + name + '.csv'
+    filename3 = folder + 'AllData_' + name + '.dat'
     
+    paramdict = {}
     paramdict['volume'] = vol
     paramdict['sample_cnt'] = sample_cnt
     paramdict['tequ'] = 50
@@ -196,7 +218,11 @@ def Experiment(vol = 0.5, param_val = 0.5, param_name = 'ATPfrac', ens_size = 5,
     DelS = {}
     
     keyname = param_name + ' = ' + str(param_val)
-    paramdict[param_name] = param_val
+    if param_name == 'Delmu':
+        paramdict['Khyd'] = (np.exp(param_val)*FindParam('Piconc','default',folder=code_folder)*
+                             ((1/FindParam('ATPfrac','default',folder=code_folder))-1))
+    else:
+        paramdict[param_name] = param_val
     results[keyname], T, Sdot = Ensemble(paramdict,ens_size,folder=code_folder)
     tau[keyname] = FirstPassage(results[keyname],Ncyc=Ncyc)
     DelS[keyname] = Sdot*T*Ncyc
@@ -216,7 +242,6 @@ def PlotExperiment(ex_out,tmax = 3000., taumax = 3000., nbins = 50):
     results = ex_out[2]
     ns2 = len(tau.keys())
     tbins = np.linspace(0,taumax,nbins)
-    sbins = np.linspace(0,DelSmax,nbins)
     fig, axs = plt.subplots(ns2,2,sharex='col',figsize = (8,10))
     
     paramlist = []

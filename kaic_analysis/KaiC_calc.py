@@ -13,9 +13,9 @@ parser.add_argument("es", type=int)
 args = parser.parse_args()
 
 #folder = 'test'
-#code_folder = '/users/robertmarsland/Dropbox (Personal)/BU/Thermodynamics of oscillations/KMC_KaiC_rev2/'
-folder = '/project/biophys/thermodynamics_of_oscillations/'
-code_folder = '/usr2/postdoc/marsland/KMC_KaiC/'
+#code_folder = '/users/robertmarsland/Dropbox (Personal)/BU/Thermodynamics of oscillations/KMC_KaiC_rev2'
+folder = '/project/biophys/thermodynamics_of_oscillations'
+code_folder = '/usr2/postdoc/marsland/KMC_KaiC'
 #distutils.dir_util.mkpath(folder)
 
 sc = 3e6
