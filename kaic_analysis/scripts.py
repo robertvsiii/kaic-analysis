@@ -32,7 +32,7 @@ def LoadData(name, folder = None, suffix = '.dat'):
     del col_ind[5]
     return pd.read_table(folder+name+suffix,index_col=0,usecols=col_ind)
 
-def RunModel(paramdict = {}, name = 'data', default = 'default.par', folder = None):
+def RunModel(paramdict = {}, name = 'data', default = 'default.par', folder = None, extra_mem = False):
     if folder != None:
         cwd = os.getcwd()
         os.chdir(folder)
@@ -49,7 +49,10 @@ def RunModel(paramdict = {}, name = 'data', default = 'default.par', folder = No
     with open(name + '.par','w') as f:
         for line in linelist:
             f.write(line)
-    subprocess.check_call('./KMCKaiC ' + name + '.par', shell = True)
+    if extra_mem:
+        subprocess.check_call('ulimit -s 65532; ./KMCKaiC ' + name + '.par', shell = True)
+    else:
+        subprocess.check_call('./KMCKaiC ' + name + '.par', shell = True)
     if folder != None:
         os.chdir(cwd)
         return LoadData(name, folder=folder)
