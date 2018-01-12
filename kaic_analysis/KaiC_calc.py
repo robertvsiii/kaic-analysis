@@ -9,7 +9,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("task_ID", type=int)
 parser.add_argument("param", type=str)
 parser.add_argument("scale", type=float)
-parser.add_argument("sc", type=int)
+parser.add_argument("sc", type=float)
 parser.add_argument("es", type=int)
 args = parser.parse_args()
 
@@ -22,4 +22,4 @@ code_folder = '/usr2/postdoc/marsland/KMC_KaiC'
 param_val = args.task_ID*args.scale
 
 tau, DelS, results = Experiment(ens_size=args.es,param_val=param_val,param_name=args.param,
-                                folder=folder,code_folder=code_folder,sample_cnt=args.sc,run_number=args.task_ID)
+                                folder=folder,code_folder=code_folder,sample_cnt=int(args.sc),run_number=args.task_ID)
