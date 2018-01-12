@@ -8,7 +8,6 @@ Created on Wed Nov 15 10:31:23 2017
 
 import numpy as np
 import matplotlib.pyplot as plt
-import seaborn as sns
 import pandas as pd
 import subprocess
 import os
