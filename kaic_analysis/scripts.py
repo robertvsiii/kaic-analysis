@@ -131,12 +131,15 @@ def EntropyProduction(data,name='data'):
     ATPcons = 6*conv*NA*FindParam('volume',name)*FindParam('KaiC0',name)*(data['CIATPcons'] + data['CIIATPcons'])
     return FindParam('Delmu',name)*ATPcons
 
-def Ensemble(paramdict,ns,species=['pT','pS'],folder=None,savename='data_processed'):
+def Ensemble(paramdict,ns,species=['pT','pS'],folder=None,run_number=1):
     results = []
     Tvec = []
     Sdotvec = []
     
     path = FormatPath(folder)
+    
+    name = '_'.join([str(run_number),date])
+    filename = path + 'RawData_' + name + '.dat'
 
     for k in range(ns):
         paramdict['rnd_seed'] = np.random.rand()*1000000
@@ -158,10 +161,10 @@ def Ensemble(paramdict,ns,species=['pT','pS'],folder=None,savename='data_process
         results.append({'t': t, 'J': J})
         subprocess.check_call('rm -f '+'\''+path+datname+'.dat'+'\'', shell = True)
         subprocess.check_call('rm -f '+'\''+path+datname+'.par'+'\'', shell = True)
-    T = np.nanmean(Tvec)
-    Sdot = np.nanmean(Sdotvec)
-    
-    return results, T, Sdot
+        T = np.nanmean(Tvec)
+        Sdot = np.nanmean(Sdotvec)
+        with open(filename,'wb') as f:
+            pickle.dump([results,T,Sdot],f)
 
 def FirstPassage(results,Ncyc = 1):
     tau = []
@@ -204,21 +207,13 @@ def LoadExperiment(param_name,run_numbers,date,folder='data'):
         
     return tau, DelS, results
 
-def Experiment(vol = 0.5, param_val = 0.5, param_name = 'ATPfrac', ens_size = 5, 
-               folder = 'data', Ncyc = 30, sample_cnt = 3e6, code_folder = None, run_number = 1):
-    folder = FormatPath(folder)
-    name = '_'.join([param_name,str(run_number),str(datetime.datetime.now()).split()[0]])
-    filename1 = folder + 'FirstPassageData_' + name + '.csv'
-    filename2 = folder + 'DelS_' + name + '.csv'
-    filename3 = folder + 'AllData_' + name + '.dat'
+def RunExperiment(vol = 0.5, param_val = 25, param_name = 'Delmu', ens_size = 5, 
+                  sample_cnt = 3e6, code_folder = None, run_number = 1):
     
     paramdict = {}
     paramdict['volume'] = vol
     paramdict['sample_cnt'] = sample_cnt
     paramdict['tequ'] = 50
-    results = {}
-    tau = {}
-    DelS = {}
     
     keyname = param_name + ' = ' + str(param_val)
     if param_name == 'Delmu':
@@ -226,7 +221,29 @@ def Experiment(vol = 0.5, param_val = 0.5, param_name = 'ATPfrac', ens_size = 5,
                              ((1/FindParam('ATPfrac','default',folder=code_folder))-1))
     else:
         paramdict[param_name] = param_val
-    results[keyname], T, Sdot = Ensemble(paramdict,ens_size,folder=code_folder)
+        
+    Ensemble(paramdict,ens_size,folder=code_folder,run_number=run_number)
+    
+    
+def ProcessExperiment(run_number = 1, date = str(datetime.datetime.now()).split()[0], 
+                      param_name = 'Delmu', folder = 'data', code_folder = None, Ncyc = 30):
+    
+    folder = FormatPath(folder)
+    code_folder = FormatPath(code_folder)
+    
+    filename0 = code_folder + 'RawData_' + '_'.join([str(run_number),date]) + '.dat'
+    
+    name = '_'.join([param_name,str(run_number),date])
+    filename1 = folder + 'FirstPassageData_' + name + '.csv'
+    filename2 = folder + 'DelS_' + name + '.csv'
+    filename3 = folder + 'AllData_' + name + '.dat'
+    
+    results = {}
+    tau = {}
+    DelS = {}
+    
+    with open(filename0,'rb') as f:
+        results[keyname], T, Sdot = pickle.load(f)
     tau[keyname] = FirstPassage(results[keyname],Ncyc=Ncyc)
     DelS[keyname] = Sdot*T*Ncyc
         

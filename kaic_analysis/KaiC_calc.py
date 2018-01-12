@@ -21,5 +21,8 @@ code_folder = '/usr2/postdoc/marsland/KMC_KaiC'
 
 param_val = args.task_ID*args.scale
 
-tau, DelS, results = Experiment(ens_size=args.es,param_val=param_val,param_name=args.param,
-                                folder=folder,code_folder=code_folder,sample_cnt=int(args.sc),run_number=args.task_ID)
+RunExperiment(ens_size=args.es,param_val=param_val,param_name=args.param,code_folder=code_folder,
+              sample_cnt=int(args.sc),run_number=args.task_ID)
+
+tau, DelS, results = ProcessExperiment(run_number=args.task_ID,date=str(datetime.datetime.now()).split()[0], 
+                                       param_name=args.param,folder=folder,code_folder=code_folder,Ncyc=30)
