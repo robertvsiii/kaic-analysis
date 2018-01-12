@@ -149,8 +149,8 @@ def Ensemble(paramdict,ns,species=['pT','pS'],folder=None,savename='data_process
             except:
                 subprocess.check_call('rm -f '+path+datname+'.par', shell = True)
                 count += 1
-        if data is None:
-            return 'KMCKaiC failed to run.'
+        assert data is not None, 'KMCKaiC failed to run.'
+
         t, J, T_new, center = Current(data,species)
         Sdot_new = EntropyRate(data,name=datname,folder=folder)
         Tvec.append(T_new)
