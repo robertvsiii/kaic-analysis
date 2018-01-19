@@ -138,6 +138,7 @@ def Ensemble(paramdict,ns,species=['pT','pS'],folder=None,run_number=1):
     
     path = FormatPath(folder)
     
+    date = str(datetime.datetime.now()).split()[0]
     name = '_'.join([str(run_number),date])
     filename = path + 'RawData_' + name + '.dat'
 
