@@ -216,7 +216,6 @@ def RunExperiment(vol = 0.5, param_val = 25, param_name = 'Delmu', ens_size = 5,
     paramdict['sample_cnt'] = sample_cnt
     paramdict['tequ'] = 50
     
-    keyname = param_name + ' = ' + str(param_val)
     if param_name == 'Delmu':
         paramdict['Khyd'] = (np.exp(param_val)*FindParam('Piconc','default',folder=code_folder)*
                              ((1/FindParam('ATPfrac','default',folder=code_folder))-1))
@@ -227,7 +226,7 @@ def RunExperiment(vol = 0.5, param_val = 25, param_name = 'Delmu', ens_size = 5,
     
     
 def ProcessExperiment(run_number = 1, date = str(datetime.datetime.now()).split()[0], 
-                      param_name = 'Delmu', folder = 'data', code_folder = None, Ncyc = 30):
+                      param_name = 'Delmu', param_val = 20, folder = 'data', code_folder = None, Ncyc = 30):
     
     folder = FormatPath(folder)
     code_folder = FormatPath(code_folder)
@@ -238,6 +237,8 @@ def ProcessExperiment(run_number = 1, date = str(datetime.datetime.now()).split(
     filename1 = folder + 'FirstPassageData_' + name + '.csv'
     filename2 = folder + 'DelS_' + name + '.csv'
     filename3 = folder + 'AllData_' + name + '.dat'
+    
+    keyname = param_name + ' = ' + str(param_val)
     
     results = {}
     tau = {}

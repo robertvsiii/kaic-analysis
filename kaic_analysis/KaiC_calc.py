@@ -26,4 +26,5 @@ RunExperiment(ens_size=args.es,param_val=param_val,param_name=args.param,code_fo
               sample_cnt=int(args.sc),run_number=args.task_ID)
 
 tau, DelS, results = ProcessExperiment(run_number=args.task_ID,date=str(datetime.datetime.now()).split()[0], 
-                                       param_name=args.param,folder=folder,code_folder=code_folder,Ncyc=30)
+                                       param_name=args.param,param_val=param_val,folder=folder,
+                                       code_folder=code_folder,Ncyc=30)
