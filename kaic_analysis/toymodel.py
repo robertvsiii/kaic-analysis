@@ -42,6 +42,10 @@ def CountCurrent(t,f,f_old,projection,J,Jmax,Jmin,tpass_f,tpass_r):
 def SimulateClockKinetic(teq=1,tmax=100,nsteps=1000,N=4,M=10,A=1,C=10,projection=None):
     
     #INITIALIZE
+    N = int(N)
+    M = int(M)
+    nsteps = int(nsteps)
+    
     du = C*np.asarray([np.sin((np.arange(N)-m)*2*np.pi/N) for m in range(N)])
     
     f = np.ones(N)/N
