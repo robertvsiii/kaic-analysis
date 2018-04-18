@@ -53,3 +53,5 @@ Jmax.to_csv(filenames[4],index=False,header=False)
 DelS.to_csv(filenames[5],index=False,header=False)
 tau.to_csv(filenames[6],index=False,header=False)
 pd.DataFrame(data).to_csv(filenames[7])
+for name in filenames:
+    print('Data saved to ' + name)
