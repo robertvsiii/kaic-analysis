@@ -11,8 +11,8 @@ parser = argparse.ArgumentParser()
 parser.add_argument("paramfile", type=str)
 args = parser.parse_args()
 
-folder = 'test'
-#folder = '/project/biophys/thermodynamics_of_oscillations/toymodel'
+#folder = 'test'
+folder = '/project/biophys/thermodynamics_of_oscillations/toymodel'
 distutils.dir_util.mkpath(folder)
 
 paramfilename = folder+'/'+args.paramfile
