@@ -13,8 +13,9 @@ import subprocess
 import os
 import pickle
 import datetime
+from sklearn.decomposition import PCA
 
-StateData = ['phos_frac', 'Afree', 'ACI', 'ACII', 'CIATP', 'CIIATP', 'Ttot', 'Stot', 'pU', 'pT', 'pD', 'pS']
+StateData = ['ACI', 'ACII', 'CIATP', 'CIIATP', 'pU', 'pT', 'pD', 'pS']
 
 def FormatPath(folder):
     if folder==None:
@@ -87,6 +88,36 @@ def Current(data,species):
         
     return t, J, T, center
 
+def Current_PCA(data):
+    J = [0]
+    t = [data.index[0]]
+    
+    values = [[],[]]
+    
+    data_PCA = PCA(n_components=2).fit_transform(data[StateData])
+    
+    for k in range(len(data_PCA)-1):
+        if data_PCA[k,1] >= 0 and data_PCA[k+1,1] >= 0:
+            if data_PCA[k,0] <= 0 and data_PCA[k+1,0] > 0:
+                J.append(J[-1]-1)
+                t.append(data.index[k])
+                values[0].append(data_PCA[k,0])
+                values[1].append(data_PCA[k,1])
+            if data_PCA[k,0] > 0 and data_PCA[k+1,0] <= 0:
+                J.append(J[-1]+1)
+                t.append(data.index[k])
+                values[0].append(data_PCA[k,0])
+                values[1].append(data_PCA[k,1])
+    
+    J = np.asarray(J,dtype=int)
+    t = np.asarray(t,dtype=float)
+    T = np.nan
+    if len(J) > 1:
+        if J[-1]>J[1]:
+            T = (t[-1]-t[1])/(J[-1]-J[1])
+
+return t, J, T
+
 def EntropyRate(data,name='data',folder=None):
        
     NA = 6.02e23
@@ -102,7 +133,7 @@ def FirstPassageSingleTraj(t,J):
     tau_list = []
     for k in range(2,max(J)+1):
         tau_list.append(t[np.where(J>=k)[0][0]]-t[np.where(J>=k-1)[0][0]])
-    return np.asarray(tau_list)
+    return tau_list
 
 def FindParam(param,par_file,folder=None):
     folder = FormatPath(folder)
@@ -167,17 +198,57 @@ def Ensemble(paramdict,ns,species=['pT','pS'],folder=None,run_number=1):
         with open(filename,'wb') as f:
             pickle.dump([results,T,Sdot],f)
 
-def FirstPassage(results,Ncyc = 1):
+def Ensemble_PCA(paramdict,ns,folder=None,run_number=1):
+    results = []
+    Tvec = []
+    Sdotvec = []
+    
+    path = FormatPath(folder)
+    
+    date = str(datetime.datetime.now()).split()[0]
+    name = '_'.join([str(run_number),date])
+    filename = path + 'RawData_' + name + '.dat'
+    
+    for k in range(ns):
+        paramdict['rnd_seed'] = np.random.rand()*1000000
+        data = None
+        count = 0
+        while data is None and count < 10:
+            try:
+                datname = 'data_'+str(np.random.randint(1000000))
+                data = RunModel(paramdict=paramdict,name=datname,folder=folder)
+            except:
+                subprocess.check_call('rm -f '+path+datname+'.par', shell = True)
+                count += 1
+        assert data is not None, 'KMCKaiC failed to run.'
+        
+        t, J, T_new = Current_PCA(data,species)
+        Sdot_new = EntropyRate(data,name=datname,folder=folder)
+        Tvec.append(T_new)
+        Sdotvec.append(Sdot_new)
+        results.append({'t': t, 'J': J})
+        subprocess.check_call('rm -f '+'\''+path+datname+'.dat'+'\'', shell = True)
+        subprocess.check_call('rm -f '+'\''+path+datname+'.par'+'\'', shell = True)
+        T = np.nanmean(Tvec)
+        Sdot = np.nanmean(Sdotvec)
+        with open(filename,'wb') as f:
+            pickle.dump([results,T,Sdot],f)
+
+def FirstPassage(results,Ncyc = 1,all=False):
     tau = []
-    for item in results:
-        inds1 = np.where(item['J'] >= 1)[0]
-        inds2 = np.where(item['J'] >= 1+Ncyc)[0]
-        if len(inds1) != 0 and len(inds2) != 0:
-            t1 = item['t'][inds1[0]]
-            t2 = item['t'][inds2[0]]
-            tau.append(t2-t1)
-        else:
-            tau.append(np.nan)
+    if all:
+        for item in results:
+            tau = tau + FirstPassageSingleTraj(item['t'],item['J'])
+    else:
+        for item in results:
+            inds1 = np.where(item['J'] >= 1)[0]
+            inds2 = np.where(item['J'] >= 1+Ncyc)[0]
+            if len(inds1) != 0 and len(inds2) != 0:
+                t1 = item['t'][inds1[0]]
+                t2 = item['t'][inds2[0]]
+                tau.append(t2-t1)
+            else:
+                tau.append(np.nan)
         
     return tau
 
@@ -209,7 +280,7 @@ def LoadExperiment(param_name,run_numbers,date,folder='data'):
     return tau, DelS, results
 
 def RunExperiment(vol = 0.5, param_val = 25, param_name = 'Delmu', ens_size = 5, 
-                  sample_cnt = 3e6, code_folder = None, run_number = 1):
+                  sample_cnt = 3e6, code_folder = None, run_number = 1, use_PCA = False):
     
     paramdict = {}
     paramdict['volume'] = vol
@@ -221,12 +292,18 @@ def RunExperiment(vol = 0.5, param_val = 25, param_name = 'Delmu', ens_size = 5,
                              ((1/FindParam('ATPfrac','default',folder=code_folder))-1))
     else:
         paramdict[param_name] = param_val
-        
-    Ensemble(paramdict,ens_size,folder=code_folder,run_number=run_number)
+
+    if use_PCA:
+        Ensemble_PCA(paramdict,ens_size,folder=code_folder,run_number=run_number)
+    else:
+        Ensemble(paramdict,ens_size,folder=code_folder,run_number=run_number)
     
     
-def ProcessExperiment(run_number = 1, date = str(datetime.datetime.now()).split()[0], 
+def ProcessExperiment(run_number = 1, date = str(datetime.datetime.now()).split()[0], all = False,
                       param_name = 'Delmu', param_val = 20, folder = 'data', code_folder = None, Ncyc = 30):
+    
+    if all:
+        Ncyc = 1
     
     folder = FormatPath(folder)
     code_folder = FormatPath(code_folder)
@@ -246,7 +323,7 @@ def ProcessExperiment(run_number = 1, date = str(datetime.datetime.now()).split(
     
     with open(filename0,'rb') as f:
         results[keyname], T, Sdot = pickle.load(f)
-    tau[keyname] = FirstPassage(results[keyname],Ncyc=Ncyc)
+    tau[keyname] = FirstPassage(results[keyname],Ncyc=Ncyc,all=all)
     DelS[keyname] = Sdot*T*Ncyc
         
     tau = pd.DataFrame.from_dict(tau)
