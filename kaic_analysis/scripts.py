@@ -116,7 +116,7 @@ def Current_PCA(data):
         if J[-1]>J[1]:
             T = (t[-1]-t[1])/(J[-1]-J[1])
 
-return t, J, T
+    return t, J, T
 
 def EntropyRate(data,name='data',folder=None):
        
@@ -222,7 +222,7 @@ def Ensemble_PCA(paramdict,ns,folder=None,run_number=1):
                 count += 1
         assert data is not None, 'KMCKaiC failed to run.'
         
-        t, J, T_new = Current_PCA(data,species)
+        t, J, T_new = Current_PCA(data)
         Sdot_new = EntropyRate(data,name=datname,folder=folder)
         Tvec.append(T_new)
         Sdotvec.append(Sdot_new)

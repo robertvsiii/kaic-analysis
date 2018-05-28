@@ -25,6 +25,6 @@ RunExperiment(ens_size=args.es,param_val=param_val,param_name='ATPfrac',code_fol
               sample_cnt=int(args.sc),run_number=args.task_ID,use_PCA=True)
 
 tau, DelS, results = ProcessExperiment(run_number=args.task_ID,date=str(datetime.datetime.now()).split()[0],
-                                       param_name=args.param,param_val=param_val,folder=folder,
+                                       param_name='ATPfrac',param_val=param_val,folder=folder,
                                        code_folder=code_folder,Ncyc=1,all=True)
 
