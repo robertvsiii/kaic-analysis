@@ -112,7 +112,10 @@ def Current_PCA(data):
     J = np.asarray(J,dtype=int)
     t = np.asarray(t,dtype=float)
     T = np.nan
+
     if len(J) > 1:
+        if J[-1] < 0:
+            J = -J
         if J[-1]>J[1]:
             T = (t[-1]-t[1])/(J[-1]-J[1])
 
