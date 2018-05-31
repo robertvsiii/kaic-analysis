@@ -22,7 +22,7 @@ ATPvec = 1-np.exp(np.linspace(np.log(1e-6),np.log(0.4),20))
 param_val = ATPvec[args.task_ID-1]
 
 RunExperiment(ens_size=args.es,param_val=param_val,param_name='ATPfrac',code_folder=code_folder,
-              sample_cnt=int(args.sc),run_number=args.task_ID,use_PCA=True)
+              sample_cnt=int(args.sc),run_number=args.task_ID,use_PCA=True,CIIhyd=False)
 
 tau, DelS, results = ProcessExperiment(run_number=args.task_ID,date=str(datetime.datetime.now()).split()[0],
                                        param_name='ATPfrac',param_val=param_val,folder=folder,

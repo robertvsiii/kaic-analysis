@@ -282,13 +282,16 @@ def LoadExperiment(param_name,run_numbers,date,folder='data'):
         
     return tau, DelS, results
 
-def RunExperiment(vol = 0.5, param_val = 25, param_name = 'Delmu', ens_size = 5, 
+def RunExperiment(vol = 0.5, param_val = 25, param_name = 'Delmu', ens_size = 5, CIIhyd = True,
                   sample_cnt = 3e6, code_folder = None, run_number = 1, use_PCA = False):
     
     paramdict = {}
     paramdict['volume'] = vol
     paramdict['sample_cnt'] = sample_cnt
     paramdict['tequ'] = 50
+
+    if not CIIhyd:
+        paramdict['kCIIhyd0'] = 0.1
     
     if param_name == 'Delmu':
         paramdict['Khyd'] = (np.exp(param_val)*FindParam('Piconc','default',folder=code_folder)*
