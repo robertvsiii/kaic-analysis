@@ -21,7 +21,7 @@ code_folder = '/usr2/postdoc/marsland/KMC_KaiC'
 ATPvec = 1-np.exp(np.linspace(-4,np.log(0.4),10))
 param_val = ATPvec[args.task_ID-1]
 
-RunExperiment(ens_size=args.es,param_val=param_val,param_name='ATPfrac',code_folder=code_folder,
+RunExperiment(vol=1,ens_size=args.es,param_val=param_val,param_name='ATPfrac',code_folder=code_folder,
               sample_cnt=int(args.sc),run_number=args.task_ID,use_PCA=True,CIIhyd=True)
 
 tau, DelS, results = ProcessExperiment(run_number=args.task_ID,date=str(datetime.datetime.now()).split()[0],

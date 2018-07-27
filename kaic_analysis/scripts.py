@@ -88,7 +88,7 @@ def Current(data,species):
         
     return t, J, T, center
 
-def Current_PCA(data):
+def Current_PCA(data,center=[1,0]):
     J = [0]
     t = [data.index[0]]
     
@@ -97,13 +97,13 @@ def Current_PCA(data):
     data_PCA = PCA(n_components=2).fit_transform(data[StateData])
     
     for k in range(len(data_PCA)-1):
-        if data_PCA[k,1] >= 0 and data_PCA[k+1,1] >= 0:
-            if data_PCA[k,0] <= 0 and data_PCA[k+1,0] > 0:
+        if data_PCA[k,1] >= center[1] and data_PCA[k+1,1] >= center[1]:
+            if data_PCA[k,0] <= center[0] and data_PCA[k+1,0] > center[0]:
                 J.append(J[-1]-1)
                 t.append(data.index[k])
                 values[0].append(data_PCA[k,0])
                 values[1].append(data_PCA[k,1])
-            if data_PCA[k,0] > 0 and data_PCA[k+1,0] <= 0:
+            if data_PCA[k,0] > center[0] and data_PCA[k+1,0] <= center[0]:
                 J.append(J[-1]+1)
                 t.append(data.index[k])
                 values[0].append(data_PCA[k,0])
