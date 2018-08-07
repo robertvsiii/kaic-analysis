@@ -260,27 +260,27 @@ def LoadExperiment(param_name,run_numbers,date,folder='data'):
     
     name = '_'.join([param_name,str(run_numbers[0]),date])
     filename1 = folder + 'FirstPassageData_' + name + '.csv'
-    filename2 = folder + 'DelS_' + name + '.csv'
+    filename2 = folder + 'Sdot_' + name + '.csv'
     filename3 = folder + 'AllData_' + name + '.dat'
     
     tau=pd.read_csv(filename1,index_col=0)
-    DelS=pd.read_csv(filename2,index_col=0)
+    Sdot=pd.read_csv(filename2,index_col=0)
     with open(filename3,'rb') as f:
         results=pickle.load(f)
        
     for run_number in run_numbers[1:]:
         name = '_'.join([param_name,str(run_number),date])
         filename1 = folder + 'FirstPassageData_' + name + '.csv'
-        filename2 = folder + 'DelS_' + name + '.csv'
+        filename2 = folder + 'Sdot_' + name + '.csv'
         filename3 = folder + 'AllData_' + name + '.dat'
     
         tau = tau.join(pd.read_csv(filename1,index_col=0))
-        DelS = DelS.join(pd.read_csv(filename2,index_col=0))
+        Sdot = Sdot.join(pd.read_csv(filename2,index_col=0))
         with open(filename3,'rb') as f:
             results_new=pickle.load(f)
         results.update(results_new)
         
-    return tau, DelS, results
+    return tau, Sdot, results
 
 def RunExperiment(vol = 0.5, param_val = 25, param_name = 'Delmu', ens_size = 5, CIIhyd = True,
                   sample_cnt = 3e6, code_folder = None, run_number = 1, use_PCA = False):
@@ -318,32 +318,31 @@ def ProcessExperiment(run_number = 1, date = str(datetime.datetime.now()).split(
     
     name = '_'.join([param_name,str(run_number),date])
     filename1 = folder + 'FirstPassageData_' + name + '.csv'
-    filename2 = folder + 'DelS_' + name + '.csv'
+    filename2 = folder + 'Sdot_' + name + '.csv'
     filename3 = folder + 'AllData_' + name + '.dat'
     
     keyname = param_name + ' = ' + str(param_val)
     
     results = {}
     tau = {}
-    DelS = {}
+    Sdot = {}
     
     with open(filename0,'rb') as f:
-        results[keyname], T, Sdot = pickle.load(f)
+        results[keyname], T, Sdot[keyname] = pickle.load(f)
     tau[keyname] = FirstPassage(results[keyname],Ncyc=Ncyc,all=all)
-    DelS[keyname] = Sdot*T*Ncyc
         
     tau = pd.DataFrame.from_dict(tau)
     tau.to_csv(filename1)
-    DelS = pd.DataFrame.from_dict(DelS,orient='index').T
-    DelS.to_csv(filename2)
+    Sdot = pd.DataFrame.from_dict(Sdot,orient='index').T
+    Sdot.to_csv(filename2)
     with open(filename3,'wb') as f:
         pickle.dump(results,f)
         
-    return tau, DelS, results
+    return tau, Sdot, results
 
 def PlotExperiment(ex_out,tmax = 3000., taumax = 3000., nbins = 50):
     tau = ex_out[0]
-    DelS = ex_out[1]
+    Sdot = ex_out[1]
     results = ex_out[2]
     ns2 = len(tau.keys())
     tbins = np.linspace(0,taumax,nbins)
@@ -358,7 +357,8 @@ def PlotExperiment(ex_out,tmax = 3000., taumax = 3000., nbins = 50):
 
     k = 0
     eps = []
-    DelSmean = []
+    Sdotmean = []
+    T = []
     for paramval in paramlist:
         name = param_name + ' = ' + str(paramval)
         for item in results[name]:
@@ -368,7 +368,8 @@ def PlotExperiment(ex_out,tmax = 3000., taumax = 3000., nbins = 50):
         tau[name].hist(ax=axs[k,1],bins=tbins)
         axs[k,1].set_yticks(())
         eps.append(tau[name].var()/tau[name].mean()**2)
-        DelSmean.append(DelS[name])
+        T.append(tau[name].mean())
+        Sdotmean.append(Sdot[name])
         k += 1
 
     axs[int(round(ns2*1./2)),0].set_ylabel('Number of Cycles')
@@ -379,7 +380,7 @@ def PlotExperiment(ex_out,tmax = 3000., taumax = 3000., nbins = 50):
     
     plt.show()
         
-    DelSmean = np.asarray(DelSmean)
+    DelSmean = np.asarray(Sdotmean)*np.asarray(T)
     eps = np.asarray(eps)
     DelSrange = np.linspace(min(DelSmean)*0.75,max(DelSmean)*1.25,100)
     fig2, ax2 = plt.subplots(1)
