@@ -2,6 +2,9 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from sklearn.decomposition import PCA
 import numpy as np
+from numpy.random import RandomState
+from multiprocessing import current_process
+from datetime import date, datetime
 
 def ComputeRates(f,du,A,N,M):
     dU = du.dot(f)
@@ -39,8 +42,16 @@ def CountCurrent(t,f,f_old,projection,J,Jmax,Jmin,tpass_f,tpass_r):
     return J, Jmax, Jmin, tpass_f, tpass_r, tau_f, tau_r
 
 
-def SimulateClockKinetic(teq=1,tmax=100,nsteps=1000,N=4,M=10,A=1,C=10,projection=None):
+def SimulateClockKinetic(teq=1,Ncyc=30,tmax=np.inf,nsteps=1000,N=4,M=10,A=1,C=10,projection=None):
     
+    worker = str(current_process())
+    try:
+        workernum = worker.split('-')[1].split(',')[0]
+    except:
+        workernum = str(1)
+
+    rst = RandomState(int(workernum)*int(str(datetime.now())[-3:]))
+
     #INITIALIZE
     N = int(N)
     M = int(M)
@@ -57,6 +68,8 @@ def SimulateClockKinetic(teq=1,tmax=100,nsteps=1000,N=4,M=10,A=1,C=10,projection
     Jmin = 0
     tpass_f = np.nan
     tpass_r = np.nan
+    tpassvec_f = []
+    tpassvec_r = []
     tauvec_f = []
     tauvec_r = []
     
@@ -69,8 +82,8 @@ def SimulateClockKinetic(teq=1,tmax=100,nsteps=1000,N=4,M=10,A=1,C=10,projection
     
     #Initial Rates
     prop = ComputeRates(f,du,A,N,M)
-    while t < tmax:
-        noise = np.random.rand(nsteps,3)
+    while max([Jmax,-Jmin]) <= Ncyc and t < tmax:
+        noise = rst.rand(nsteps,3)
         for m in range(nsteps):
             #CHOOSE TIME OF NEXT EVENT
             ktot = np.sum(prop[0]+prop[1])
@@ -100,8 +113,12 @@ def SimulateClockKinetic(teq=1,tmax=100,nsteps=1000,N=4,M=10,A=1,C=10,projection
                     J, Jmax, Jmin, tpass_f, tpass_r, tau_f, tau_r = CountCurrent(t,f,f_old,projection,J,Jmax,Jmin,tpass_f,tpass_r)
                     if np.isfinite(tau_f):
                         tauvec_f.append(tau_f)
+                        Jmaxvec.append(Jmax)
+                        tpassvec_f.append(tpass_f)
                     if np.isfinite(tau_r):
                         tauvec_r.append(tau_r)
+                        Jminvec.append(Jmin)
+                        tpassvec_r.append(tpass_r)
 
     
         if t > teq:
@@ -109,8 +126,6 @@ def SimulateClockKinetic(teq=1,tmax=100,nsteps=1000,N=4,M=10,A=1,C=10,projection
             ftraj.append(f.copy())
             tvec.append(t)
             DelSvec.append(DelS)
-            Jmaxvec.append(Jmax)
-            Jminvec.append(Jmin)
             Jvec.append(J)
 
     tvec = np.asarray(tvec)
@@ -121,10 +136,12 @@ def SimulateClockKinetic(teq=1,tmax=100,nsteps=1000,N=4,M=10,A=1,C=10,projection
         Jmaxvec = -np.asarray(Jminvec)
         Jvec = -np.asarray(Jvec)
         tauvec = np.asarray(tauvec_r)
+        tpassvec = np.asarray(tpassvec_r)
     else:
         Jmaxvec = np.asarray(Jmaxvec)
         Jvec = np.asarray(Jvec)
         tauvec = np.asarray(tauvec_f)
+        tpassvec = np.asarray(tpassvec_f)
 
     if projection is not None:
         T = np.mean(tauvec)
@@ -134,12 +151,11 @@ def SimulateClockKinetic(teq=1,tmax=100,nsteps=1000,N=4,M=10,A=1,C=10,projection
     if projection is None:
         return {'t':tvec, 'f':ftraj}
     else:
-        return {'t':tvec, 'f':ftraj, 'DelS':DelSvec, 'Jmax':Jmaxvec,
+        return {'DelS':DelSvec, 'tpass':tpassvec, 'Jmax':Jmaxvec,
             'tau':tauvec, 'D': D, 'T': T, 'Sdot': Sdot}
 
 def Master(kwargs_in):
     kwargs = kwargs_in.copy()
-    tmax = kwargs['tmax']
     nsteps = kwargs['nsteps']
     kwargs['tmax'] = kwargs['t_init']
     kwargs['nsteps'] = kwargs['n_init']
@@ -147,11 +163,8 @@ def Master(kwargs_in):
     del kwargs['n_init']
     out = SimulateClockKinetic(**kwargs)
     model = PCA(n_components=2).fit(out['f'])
-    kwargs.update({'tmax':tmax,'nsteps':nsteps,'projection':model})
+    kwargs.update({'nsteps':nsteps,'projection':model})
     out = SimulateClockKinetic(**kwargs)
-    f_PCA = model.transform(out['f'])
-    out['f1'] = f_PCA[:,0]
-    out['f2'] = f_PCA[:,1]
     print('Finished Job')
     
     return out
