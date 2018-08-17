@@ -163,6 +163,7 @@ def Master(kwargs_in):
     del kwargs['n_init']
     out = SimulateClockKinetic(**kwargs)
     model = PCA(n_components=2).fit(out['f'])
+    del kwargs['tmax']
     kwargs.update({'nsteps':nsteps,'projection':model})
     out = SimulateClockKinetic(**kwargs)
     print('Finished Job')
