@@ -146,7 +146,7 @@ def SimulateClockKinetic(teq=1,Ncyc=30,tmax=np.inf,nsteps=1000,N=4,M=10,A=1,C=10
     if projection is not None:
         T = np.mean(tauvec)
         D = np.var(tauvec)/T
-        Sdot = DelS/t
+        Sdot = DelS/(t-teq)
 
     if projection is None:
         return {'t':tvec, 'f':ftraj}
