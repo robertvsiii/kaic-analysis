@@ -25,10 +25,12 @@ if args.task_ID <= n_tasks:
 elif args.task_ID == n_tasks+1:
     param_val = 1-np.exp(-18)
 
+date = str(datetime.datetime.now()).split()[0]
+
 RunExperiment(vol=1,ens_size=args.es,param_val=param_val,param_name='ATPfrac',code_folder=code_folder,
               sample_cnt=int(args.sc),run_number=args.task_ID,use_PCA=True,CIIhyd=True)
 
-tau, DelS, results = ProcessExperiment(run_number=args.task_ID,date=str(datetime.datetime.now()).split()[0],
+tau, DelS, results = ProcessExperiment(run_number=args.task_ID,date=date,
                                        param_name='ATPfrac',param_val=param_val,folder=folder,
                                        code_folder=code_folder,Ncyc=1,all=True)
 
