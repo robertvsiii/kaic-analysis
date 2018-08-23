@@ -22,7 +22,7 @@ n_tasks = 20
 ATPvec = 1-np.exp(np.linspace(-3,np.log(0.4),n_tasks))
 if args.task_ID <= n_tasks:
     param_val = ATPvec[args.task_ID-1]
-elif args.task_ID == n_tasks:
+elif args.task_ID == n_tasks+1:
     param_val = 1-np.exp(-18)
 
 RunExperiment(vol=1,ens_size=args.es,param_val=param_val,param_name='ATPfrac',code_folder=code_folder,
