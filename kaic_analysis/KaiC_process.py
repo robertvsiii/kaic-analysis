@@ -17,8 +17,12 @@ folder = '/project/biophys/thermodynamics_of_oscillations'
 code_folder = '/usr2/postdoc/marsland/KMC_KaiC'
 #distutils.dir_util.mkpath(folder)
 
-ATPvec = 1-np.exp(np.linspace(-6,np.log(0.4),20))
-param_val = ATPvec[args.task_ID-1]
+n_tasks = 20
+ATPvec = 1-np.exp(np.linspace(-3,np.log(0.4),n_tasks))
+if args.task_ID <= n_tasks:
+    param_val = ATPvec[args.task_ID-1]
+elif args.task_ID == n_tasks+1:
+    param_val = 1-np.exp(-18)
 
 tau, DelS, results = ProcessExperiment(run_number=args.task_ID,date=args.date,
                                        param_name='ATPfrac',param_val=param_val,folder=folder,
