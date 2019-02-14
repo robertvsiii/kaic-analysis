@@ -69,7 +69,7 @@ The code is free for scientific use.  Please contact us if you plan to use this 
 Installation
 ----------
 Extract the content of this archive in a new directory.
-The simulation code is written in C++. Therefore, running the code requires installation of a C++ compiler. On a typical linux sistribution, type
+The simulation code is written in C++. Therefore, running the code requires installation of a C++ compiler. On a typical linux distribution, type
 
   make 
 
